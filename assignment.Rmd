@@ -1,0 +1,93 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "Bruno Hoste"
+date: "24-8-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Executive summary
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The goal is to build a model that predicts, with data from accelerometers, the way the exercise was performed. 
+We will focus on the two most widely used models thought in the class, Random Forest and Boosting. We will first clean the data, then build the models and select the best one. Finally we will use our best model to predict the data of the quiz.
+
+## Exploratory data analysis
+
+We dowloaded the data from following source:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv.
+Reading in the data, we immediately see that there are a vast amount of fields containing NAs, #DIV/O!, or are blank. We therefore read in the data again, setting all these fields to NA. After that we decide to remove all variables (columns) containing over 95% of NAs, since these will not make very useful predictors. 
+We also set the outcome variable (classe) as factor. The outcome is one of the 5 possible ways to do the exercise (A, B, C, D or E). Thereafter we remove the first seven columns, since these are just identifying columns, not predictors.
+
+```{r}
+training <- read.csv("pml-training.csv")
+
+training <- read.csv("pml-training.csv",na.strings = c("NA",""," ","#DIV/0!"))
+
+training <- training[, -which(colMeans(is.na(training)) > 0.95)]
+
+training$classe <- factor(training$classe)
+
+training <- training[,-c(1:7)]
+```
+
+We end up with a dataset containing an outcome (classe) and 52 possible predictors.
+```{r}
+dim (training)
+unique (training$classe)
+```
+
+## Model building
+
+### Preparing the data
+
+We first load the caret package, set the seed and build a trainset and a testset in our training dataset.
+
+```{r}
+library(caret)
+set.seed(123)
+inTrain <- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+trainset <- training[inTrain, ]
+testset <- training[-inTrain, ]
+```
+
+### Boosting
+
+We first build a model using boosting. We incorporate some **crossvalidation**, using the trControl option.
+We use the model to predict the testset and as such obtain an accuracy of 96.3%.
+```{r,eval=T}
+modFitgbm <- train(classe ~ ., data = trainset, method = 'gbm', trControl = trainControl(method="cv", number=3), verbose = F)
+predgbm <- predict(modFitgbm,testset)
+confgbm <- confusionMatrix(predgbm,testset$classe)
+modFitgbm$finalModel
+confgbm
+```
+
+### Random forest
+
+Secondly we use random forest methodology. Again we incorporate **crossvalidation**. In this case we get an accuracy of 99.3% and an estimate out of bag error rate of 0.7% 
+
+```{r,eval=T} 
+
+modFitrf <- train(classe ~ ., data = trainset, method = 'rf', trControl = trainControl(method="cv", number=3, verboseIter=FALSE), prox = T)
+predrf <- predict(modFitrf,testset)
+confrf <- confusionMatrix(predrf,testset$classe)
+modFitrf$finalModel
+confrf
+```
+
+## Model selection and prediction
+
+As we get a higher accuracy from our random forest model, we will use it to predict the test data.
+The data for testing are obtained from this source:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The prediction for the data is as follows:
+
+```{r,eval=T}
+testing <- read.csv("pml-testing.csv",na.strings = c("NA",""," ","#DIV/0!"))
+predtest <- data.frame(predict(modFitrf,testing))
+predtest
+```
+

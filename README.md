@@ -1,8 +1,9 @@
-# Practica-machine-learning-assignment
+# Practica-machine-learning-assignment, compile html file below
+
+Prediction Assignment Writeup
 
 https://htmlpreview.github.io/?https://github.com/BrunoHoste/Practica-machine-learning-assignment/blob/master/assignment.html
 
-Prediction Assignment Writeup
 
 Background
 
